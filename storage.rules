@@ -1,0 +1,13 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Print job documents: only owner can upload, retailer can read (temporarily)
+    match /printjobs/{userId}/{filename} {
+      // Owner can upload and read their own files
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Max file size: 50MB
+      allow write: if request.resource.size < 50 * 1024 * 1024;
+    }
+  }
+}

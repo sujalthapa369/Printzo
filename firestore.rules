@@ -1,0 +1,64 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuth() {
+      return request.auth != null;
+    }
+    function isOwner(uid) {
+      return isAuth() && request.auth.uid == uid;
+    }
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    function isRetailer() {
+      return isAuth() && getUserData().role == 'retailer';
+    }
+
+    // Users: can read/write own data
+    match /users/{userId} {
+      allow read: if isOwner(userId);
+      allow create: if isAuth() && request.auth.uid == userId;
+      allow update: if isOwner(userId);
+    }
+
+    // Shops: retailers manage their own, customers can read active shops
+    match /shops/{shopId} {
+      allow read: if true; // Anyone can view shops (for QR scan landing)
+      allow create: if isRetailer();
+      allow update: if isRetailer() && resource.data.ownerId == request.auth.uid;
+      allow delete: if isRetailer() && resource.data.ownerId == request.auth.uid;
+    }
+
+    // Printers: retailers manage their own, customers can read
+    match /printers/{printerId} {
+      allow read: if true;
+      allow create: if isRetailer();
+      allow update, delete: if isRetailer() && (
+        get(/databases/$(database)/documents/shops/$(resource.data.shopId)).data.ownerId == request.auth.uid
+      );
+    }
+
+    // Print jobs
+    match /printJobs/{jobId} {
+      // Customers can create and read their own jobs
+      allow create: if isAuth();
+      allow read: if isAuth() && (
+        resource.data.customerId == request.auth.uid ||
+        get(/databases/$(database)/documents/shops/$(resource.data.shopId)).data.ownerId == request.auth.uid
+      );
+      // Only retailer who owns the shop can update job status
+      allow update: if isAuth() && (
+        resource.data.customerId == request.auth.uid ||
+        get(/databases/$(database)/documents/shops/$(resource.data.shopId)).data.ownerId == request.auth.uid
+      );
+    }
+
+    // Wallet transactions: users can read their own
+    match /walletTransactions/{txId} {
+      allow read: if isAuth() && resource.data.userId == request.auth.uid;
+      allow create: if isAuth() && request.resource.data.userId == request.auth.uid;
+    }
+  }
+}
