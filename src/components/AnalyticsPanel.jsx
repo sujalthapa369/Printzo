@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { getShopJobHistory } from '../firebase/db'
+import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore'
+import { db } from '../firebase/config'
 import { TrendingUp, FileText, IndianRupee, Layers, Calendar, ArrowUpRight, TrendingDown, Clock } from 'lucide-react'
 import { formatINR } from '../utils/helpers'
 import { motion } from 'framer-motion'
@@ -14,17 +15,28 @@ export default function AnalyticsPanel({ shopId }) {
   const [jobs, setJobs] = useState([])
 
   useEffect(() => {
-    if (shopId) {
-      setLoading(true)
-      getShopJobHistory(shopId, 1000)
-        .then((data) => {
-          // Filter to only include money-generating status
-          const validJobs = data.filter(j => j.status === 'completed' || j.status === 'printing' || j.status === 'pending')
-          setJobs(validJobs)
-        })
-        .catch(err => console.error("Analytics fetch failed:", err))
-        .finally(() => setLoading(false))
-    }
+    if (!shopId) return
+
+    setLoading(true)
+    const q = query(
+      collection(db, 'printJobs'),
+      where('shopId', '==', shopId),
+      orderBy('createdAt', 'desc'),
+      limit(1000)
+    )
+
+    const unsub = onSnapshot(q, (snap) => {
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      // Filter to only include money-generating status
+      const validJobs = data.filter(j => j.status === 'completed' || j.status === 'printing' || j.status === 'pending')
+      setJobs(validJobs)
+      setLoading(false)
+    }, (err) => {
+      console.error("Analytics real-time sync failed:", err)
+      setLoading(false)
+    })
+
+    return () => unsub()
   }, [shopId])
 
   const stats = useMemo(() => {
