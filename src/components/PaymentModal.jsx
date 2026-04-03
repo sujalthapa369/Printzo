@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { X, Zap, Banknote, Wallet, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react'
-import { formatINR, PAYMENT_METHODS } from '../utils/helpers'
+import { formatINR, PAYMENT_METHODS, getQRCodeUrl } from '../utils/helpers'
 import { deductWallet } from '../firebase/db'
 import { useAuth } from '../context/AuthContext'
 import toast from 'react-hot-toast'
 
-export default function PaymentModal({ job, onConfirm, onClose, walletBalance = 0 }) {
+export default function PaymentModal({ job, onConfirm, onClose, walletBalance = 0, shopUpiId }) {
   const { user } = useAuth()
   const [selected, setSelected] = useState('upi')
   const [loading, setLoading] = useState(false)
@@ -26,17 +26,17 @@ export default function PaymentModal({ job, onConfirm, onClose, walletBalance = 
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-md glass-bright border border-border rounded-2xl overflow-hidden shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
+      <div className="w-full max-w-md glass-bright border border-border rounded-2xl flex flex-col max-h-[90vh] shadow-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
           <h2 className="text-lg font-syne font-bold text-white">Confirm & Pay</h2>
           <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5">
             <X size={18} />
           </button>
         </div>
 
-        <div className="p-6 space-y-5">
+        <div className="p-5 space-y-5 overflow-y-auto">
           {/* Order summary */}
           <div className="bg-surface border border-border rounded-xl p-4 space-y-2">
             <p className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-3">Order Summary</p>
@@ -94,11 +94,28 @@ export default function PaymentModal({ job, onConfirm, onClose, walletBalance = 
             })}
           </div>
 
-          {/* UPI note */}
+          {/* UPI note and QR Code */}
           {selected === 'upi' && (
-            <div className="flex items-start gap-2 bg-blue-500/10 border border-blue-500/20 rounded-xl p-3 text-xs text-blue-300">
-              <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />
-              <span>UPI payment confirmation is manual in demo mode. In production, this connects to a payment gateway.</span>
+            <div className="flex flex-col items-center gap-3 bg-surface border border-border rounded-xl p-5 text-center mt-2">
+              <p className="text-sm font-semibold text-white">Scan QR Code to Pay</p>
+              
+              <div className="bg-white p-2 rounded-xl">
+                <img 
+                  src={getQRCodeUrl(`upi://pay?pa=${shopUpiId || 'tsujal568@okhdfcbank'}&pn=Printzo&am=${job.amount}&cu=INR`, 160)} 
+                  alt="UPI QR Code" 
+                  className="w-32 h-32" 
+                />
+              </div>
+              
+              <div className="text-xs text-slate-400 space-y-1">
+                <p>UPI ID: <span className="text-white font-mono">{shopUpiId || 'tsujal568@okhdfcbank'}</span></p>
+                <p>Amount: <span className="text-emerald-400 font-bold">{formatINR(job.amount)}</span></p>
+              </div>
+
+              <div className="flex items-start gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-xs text-emerald-400 text-left w-full mt-2">
+                <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />
+                <span>Once payment is done, click confirm to automatically trigger the ESP32 printer queue.</span>
+              </div>
             </div>
           )}
 
@@ -110,23 +127,25 @@ export default function PaymentModal({ job, onConfirm, onClose, walletBalance = 
           )}
 
           {/* Confirm button */}
-          <button
-            onClick={handleConfirm}
-            disabled={loading}
-            className="w-full btn-primary justify-center text-base py-3.5"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2">
-                <span className="spinner" />
-                Processing…
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                Confirm & Submit Job
-                <ArrowRight size={16} />
-              </span>
-            )}
-          </button>
+          <div className="pt-2 pb-1 sticky bottom-0 bg-surface/80 backdrop-blur-sm border-t border-border/50 -mx-5 px-5 mt-4">
+            <button
+              onClick={handleConfirm}
+              disabled={loading}
+              className="w-full btn-primary justify-center text-base py-3.5 shadow-lg"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <span className="spinner" />
+                  Processing…
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  Confirm & Submit Job
+                  <ArrowRight size={16} />
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  Printer, QrCode, Settings, BarChart2, Plus, Trash2,
+  Printer, QrCode, Settings, BarChart3, Plus, Trash2,
   Wifi, Usb, Bluetooth, RefreshCw, Save, Package, Clock, CheckCircle, XCircle,
 } from 'lucide-react'
 import {
@@ -11,12 +11,15 @@ import {
 } from '../firebase/db'
 import { useAuth } from '../context/AuthContext'
 import Navbar from '../components/Navbar'
+import AnalyticsPanel from '../components/AnalyticsPanel'
 import QRCodeDisplay from '../components/QRCodeDisplay'
 import JobCard from '../components/JobCard'
 import { formatINR, shortDate } from '../utils/helpers'
 import toast from 'react-hot-toast'
 
 const TABS = [
+  { key: 'queue', label: 'Live Queue', icon: Clock },
+  { key: 'analytics', label: 'Analytics', icon: BarChart3 },
   { key: 'printers', label: 'Printers', icon: Printer },
   { key: 'qr', label: 'QR Code', icon: QrCode },
   { key: 'settings', label: 'Settings', icon: Settings },
@@ -32,7 +35,8 @@ export default function RetailerDashboard() {
   const [shop, setShop] = useState(null)
   const [printers, setPrinters] = useState([])
   const [loadingInit, setLoadingInit] = useState(true)
-  const [tab, setTab] = useState('printers')
+  const [tab, setTab] = useState('queue')
+  const [jobs, setJobs] = useState([])
   const [shopForm, setShopForm] = useState(defaultShopForm)
   const [printerForm, setPrinterForm] = useState(defaultPrinterForm)
   const [savingShop, setSavingShop] = useState(false)
@@ -42,6 +46,12 @@ export default function RetailerDashboard() {
   useEffect(() => {
     init()
   }, [])
+
+  useEffect(() => {
+    if (!shop?.id) return
+    const unsub = subscribeToShopJobs(shop.id, setJobs)
+    return () => unsub()
+  }, [shop?.id])
 
   const init = async () => {
     try {
@@ -199,6 +209,34 @@ export default function RetailerDashboard() {
                 </button>
               ))}
             </div>
+
+            {/* ── QUEUE ────────────────────────────── */}
+            {tab === 'queue' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-slate-300">Live Print Queue</h2>
+                  <span className="text-xs bg-primary/20 text-primary px-2 py-1 rounded-md">{jobs.length} Pending</span>
+                </div>
+                
+                {jobs.length === 0 ? (
+                  <div className="card text-center py-10">
+                    <Clock size={36} className="text-slate-700 mx-auto mb-3" />
+                    <p className="text-slate-400">Waiting for new print requests...</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {jobs.map(job => (
+                      <JobCard key={job.id} job={job} />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── ANALYTICS ─────────────────────────── */}
+            {tab === 'analytics' && (
+              <AnalyticsPanel shopId={shop.id} />
+            )}
 
             {/* ── PRINTERS ─────────────────────────── */}
             {tab === 'printers' && (

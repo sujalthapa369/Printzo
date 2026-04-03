@@ -35,7 +35,8 @@ export default function FileUpload({ onFileReady, disabled }) {
     setProgress(0)
 
     try {
-      const fileData = await uploadDocument(file, user.uid, (p) => setProgress(p))
+      const uploaderId = user?.uid || `guest_${Date.now()}`
+      const fileData = await uploadDocument(file, uploaderId, (p) => setProgress(p))
       const pages = estimatePageCount(file.size, file.type)
       const result = { ...fileData, pages }
       setUploadedFile(result)

@@ -109,7 +109,16 @@ export const subscribeToShopJobs = (shopId, callback) => {
     orderBy('createdAt', 'asc')
   )
   return onSnapshot(q, (snap) => {
-    callback(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    const jobs = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    
+    // Auto-sort to float "Instant Print" VIP jobs to the very top of the queue!
+    jobs.sort((a, b) => {
+      if (a.isInstant && !b.isInstant) return -1
+      if (!a.isInstant && b.isInstant) return 1
+      return 0
+    })
+    
+    callback(jobs)
   })
 }
 

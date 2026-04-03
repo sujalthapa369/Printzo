@@ -48,11 +48,23 @@ export default function ShopPage() {
       ])
       if (!shopData) { toast.error('Shop not found'); return }
       setShop(shopData)
-      setPrinters(printersData)
-      if (printersData.length > 0) {
-        setSelectedPrinter(printersData[0])
-        setPrintMode(printersData[0].supportsColor ? 'bw' : 'bw')
+
+      // Fallback: If the retailer forgot to configure a printer, inject a default one so the page doesn't break!
+      let activePrinters = printersData
+      if (activePrinters.length === 0) {
+        activePrinters = [{
+          id: 'default-printer',
+          name: 'Standard Printer',
+          status: 'online',
+          supportsColor: true,
+          priceBW: 2,
+          priceColor: 10
+        }]
       }
+      
+      setPrinters(activePrinters)
+      setSelectedPrinter(activePrinters[0])
+      setPrintMode(activePrinters[0].supportsColor ? 'bw' : 'bw')
     } catch {
       toast.error('Failed to load shop')
     } finally {
@@ -214,12 +226,7 @@ export default function ShopPage() {
                 <span className="w-5 h-5 rounded-full bg-primary text-xs font-bold flex items-center justify-center">1</span>
                 Upload Document
               </h3>
-              <FileUpload onFileReady={handleFileReady} disabled={!user && true} />
-              {!user && (
-                <p className="text-xs text-slate-500 mt-2 text-center">
-                  <Link to="/auth" className="text-cyan hover:underline">Sign in</Link> to upload and print documents
-                </p>
-              )}
+              <FileUpload onFileReady={handleFileReady} />
             </div>
 
             {/* Configure */}
@@ -229,6 +236,21 @@ export default function ShopPage() {
                   <span className="w-5 h-5 rounded-full bg-primary text-xs font-bold flex items-center justify-center">2</span>
                   Configure Print
                 </h3>
+
+                {/* Document Preview */}
+                <div className="card p-2 overflow-hidden">
+                  <div className="flex items-center justify-between px-2 pt-1 pb-2 mb-1">
+                    <p className="text-xs text-slate-400 uppercase tracking-wider font-medium">Document Preview</p>
+                    <a href={uploadedFile.url} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan hover:underline font-medium">
+                      Open Full Screen
+                    </a>
+                  </div>
+                  {uploadedFile.type?.startsWith('image/') ? (
+                    <img src={uploadedFile.url} alt="Preview" className="w-full h-64 object-contain rounded-lg bg-surface" />
+                  ) : (
+                    <iframe src={uploadedFile.url} className="w-full h-64 rounded-lg bg-white" title="Document Preview" />
+                  )}
+                </div>
 
                 {/* Pages */}
                 <div className="card py-4">
@@ -334,6 +356,7 @@ export default function ShopPage() {
           onConfirm={handleConfirmPrint}
           onClose={() => setShowPayment(false)}
           walletBalance={walletBalance}
+          shopUpiId={shop?.upiId}
         />
       )}
     </div>

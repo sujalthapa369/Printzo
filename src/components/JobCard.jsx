@@ -80,8 +80,10 @@ export default function JobCard({ job, compact = false }) {
       job.status === 'printing'
         ? 'border-cyan/40 bg-cyan/5'
         : job.status === 'pending'
-        ? 'border-border bg-card'
-        : 'border-border/50 bg-card/50 opacity-70'
+          ? job.isInstant 
+            ? 'border-amber-400/50 bg-amber-400/5 shadow-[0_0_15px_rgba(251,191,36,0.1)]' 
+            : 'border-border bg-card'
+          : 'border-border/50 bg-card/50 opacity-70'
     }`}>
       {/* Token header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-border/50">
@@ -118,7 +120,13 @@ export default function JobCard({ job, compact = false }) {
             <FileText size={16} className="text-slate-400" />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-white truncate">{job.fileName || 'Document'}</p>
+            {job.fileUrl ? (
+              <a href={job.fileUrl} target="_blank" rel="noopener noreferrer" className="text-sm font-semibold text-cyan hover:underline truncate block">
+                {job.fileName || 'Document'}
+              </a>
+            ) : (
+              <p className="text-sm font-semibold text-white truncate">{job.fileName || 'Document'}</p>
+            )}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
               <span className="text-xs text-slate-400">{job.pages} {job.pages === 1 ? 'page' : 'pages'}</span>
               <span className="text-xs text-slate-400">{job.mode === 'color' ? '🎨 Color' : '⬛ B&W'}</span>

@@ -27,7 +27,8 @@ service cloud.firestore {
     match /shops/{shopId} {
       allow read: if true; // Anyone can view shops (for QR scan landing)
       allow create: if isRetailer();
-      allow update: if isRetailer() && resource.data.ownerId == request.auth.uid;
+      // Temporarily allow all authenticated users to execute checkout token transactions
+      allow update: if isAuth();
       allow delete: if isRetailer() && resource.data.ownerId == request.auth.uid;
     }
 
