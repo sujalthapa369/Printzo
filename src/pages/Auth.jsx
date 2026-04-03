@@ -74,7 +74,7 @@ export default function Auth() {
           <div className="w-9 h-9 bg-gradient-to-br from-primary to-cyan rounded-xl flex items-center justify-center">
             <Printer size={18} className="text-white" />
           </div>
-          <span className="text-2xl font-syne font-bold text-white">Print<span className="text-cyan">zo</span></span>
+          <span className="text-2xl font-syne font-bold text-main">Print<span className="text-cyan">zo</span></span>
         </Link>
 
         <div className="glass-bright border border-white/8 rounded-2xl overflow-hidden shadow-2xl">
@@ -86,8 +86,8 @@ export default function Auth() {
                 onClick={() => setTab(t)}
                 className={`flex-1 py-4 text-sm font-semibold transition-all ${
                   tab === t
-                    ? 'text-white border-b-2 border-primary bg-primary/5'
-                    : 'text-slate-500 hover:text-slate-300'
+                    ? 'text-main border-b-2 border-primary bg-primary/5'
+                    : 'text-muted hover:text-main'
                 }`}
               >
                 {t === 'login' ? 'Sign In' : 'Create Account'}
@@ -110,8 +110,8 @@ export default function Auth() {
                       onClick={() => setRole(key)}
                       className={`p-3 rounded-xl border text-left transition-all ${
                         role === key
-                          ? 'border-primary bg-primary/10 text-white'
-                          : 'border-border bg-surface text-slate-400 hover:border-primary/40'
+                          ? 'border-primary bg-primary/10 text-main'
+                          : 'border-border bg-card text-muted hover:border-primary/40'
                       }`}
                     >
                       <Icon size={16} className={`mb-1.5 ${role === key ? 'text-primary' : ''}`} />
@@ -133,7 +133,7 @@ export default function Auth() {
                     placeholder="Full Name"
                     value={name}
                     onChange={e => setName(e.target.value)}
-                    className="input pl-10"
+                    className="input pl-10 text-main bg-card"
                     required
                   />
                 </div>
@@ -146,7 +146,7 @@ export default function Auth() {
                   placeholder="Email address"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
-                  className="input pl-10"
+                  className="input pl-10 text-main bg-card"
                   required
                 />
               </div>
@@ -158,7 +158,7 @@ export default function Auth() {
                   placeholder="Password (min 6 chars)"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="input pl-10 pr-10"
+                  className="input pl-10 pr-10 text-main bg-card"
                   required
                 />
                 <button
@@ -188,7 +188,7 @@ export default function Auth() {
             <button
               onClick={handleGoogle}
               disabled={googleLoading}
-              className="w-full flex items-center justify-center gap-3 bg-surface border border-border rounded-xl py-3 text-sm text-slate-300 hover:border-white/20 hover:bg-white/5 transition-all"
+              className="w-full flex items-center justify-center gap-3 bg-card border border-border rounded-xl py-3 text-sm text-main hover:border-primary/30 transition-all font-medium"
             >
               {googleLoading ? <span className="spinner" /> : (
                 <>
