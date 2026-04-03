@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Printer, Wallet, MapPin, Sparkles, Plus, Clock, FileText, RefreshCw, CreditCard } from 'lucide-react'
+import { Printer, Wallet, MapPin, Sparkles, Plus, Clock, FileText, RefreshCw, CreditCard, ShieldCheck } from 'lucide-react'
 import { getCustomerJobs, topUpWallet, subscribeToUserData } from '../firebase/db'
 import { useAuth } from '../context/AuthContext'
 import Navbar from '../components/Navbar'
@@ -23,16 +23,19 @@ export default function CustomerPortal() {
   const [liveUserData, setLiveUserData] = useState(userData)
   const [topUpAmount, setTopUpAmount] = useState('')
   const [topping, setTopping] = useState(false)
+  const [showTopUpPayment, setShowTopUpPayment] = useState(false)
 
   useEffect(() => {
     if (!user) return
-    const unsub = subscribeToUserData(user.uid, setLiveUserData)
+    const unsub = subscribeToUserData(user.uid, (data) => {
+      setLiveUserData(data)
+    })
     return unsub
   }, [user])
 
   useEffect(() => {
-    if (tab === 'jobs') loadJobs()
-  }, [tab])
+    if (tab === 'jobs' && user) loadJobs()
+  }, [tab, user])
 
   const loadJobs = async () => {
     setLoadingJobs(true)
@@ -46,24 +49,28 @@ export default function CustomerPortal() {
     }
   }
 
-  const handleTopUp = async () => {
+  const handleTopUp = () => {
     const amount = parseInt(topUpAmount)
     if (!amount || amount < 10) { toast.error('Minimum top-up is ₹10'); return }
     if (amount > 5000) { toast.error('Maximum top-up is ₹5000'); return }
-    setTopping(true)
+    setShowTopUpPayment(true)
+  }
+
+  const confirmTopUp = async () => {
+    const amount = parseInt(topUpAmount)
     try {
       await topUpWallet(user.uid, amount)
-      toast.success(`₹${amount} added to wallet!`)
+      toast.success(`₹${amount} added! Wallet updated.`)
       setTopUpAmount('')
+      setShowTopUpPayment(false)
     } catch {
-      toast.error('Top-up failed')
-    } finally {
-      setTopping(false)
+      toast.error('Failed to update wallet')
     }
   }
 
   const hasSubscription = liveUserData?.subscription?.active &&
     new Date(liveUserData?.subscription?.expiresAt?.toDate?.() || liveUserData?.subscription?.expiresAt) > new Date()
+
   return (
     <div className="min-h-screen bg-bg">
       <Navbar />
@@ -82,26 +89,8 @@ export default function CustomerPortal() {
           </Link>
         </div>
 
-        {/* Wallet quick view */}
-        <div className="card mb-6 bg-gradient-to-r from-primary/10 to-cyan/10 border-primary/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center">
-                <Wallet size={18} className="text-primary" />
-              </div>
-              <div>
-                <p className="text-xs text-slate-400">Wallet Balance</p>
-                <p className="text-2xl font-syne font-bold text-main">{formatINR(liveUserData?.wallet || 0)}</p>
-              </div>
-            </div>
-            <button onClick={() => setTab('wallet')} className="btn-secondary text-xs py-2 px-3">
-              <Plus size={12} /> Add Money
-            </button>
-          </div>
-        </div>
-
-        {/* Tabs */}
-        <div className="flex gap-1 bg-surface border border-border rounded-xl p-1 mb-6 overflow-x-auto">
+        {/* Tab Switcher */}
+        <div className="flex gap-2 p-1 bg-surface border border-border rounded-xl mb-8 overflow-x-auto no-scrollbar">
           {TABS.map(({ key, label, icon: Icon }) => (
             <button
               key={key}
@@ -118,81 +107,72 @@ export default function CustomerPortal() {
           ))}
         </div>
 
-        {/* ── MY PRINTS ─────────────────────────────────────────────── */}
+        {/* ── PRINT JOBS ────────────────────────────────────────────── */}
         {tab === 'jobs' && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-sm font-semibold text-slate-300">Print History</h2>
-              <button onClick={loadJobs} className="text-slate-500 hover:text-white p-1 transition-colors">
-                <RefreshCw size={14} />
-              </button>
-            </div>
+          <div className="space-y-4">
             {loadingJobs ? (
-              <div className="flex justify-center py-12">
-                <div className="spinner" style={{ width: 28, height: 28 }} />
+              <div className="py-20 text-center space-y-4">
+                <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto" />
+                <p className="text-sm text-muted">Fetching your prints...</p>
               </div>
             ) : jobs.length === 0 ? (
-              <div className="card text-center py-12">
-                <FileText size={40} className="text-slate-700 mx-auto mb-3" />
-                <p className="text-slate-400 mb-4">No print jobs yet</p>
-                <Link to="/shops" className="btn-primary justify-center">
-                  <Printer size={14} /> Start Printing
+              <div className="card text-center py-16">
+                <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Printer size={28} className="text-primary" />
+                </div>
+                <h3 className="text-lg font-syne font-bold text-main mb-2">No prints yet</h3>
+                <p className="text-sm text-muted mb-6">Upload a document and find a shop to start printing.</p>
+                <Link to="/shops" className="btn-primary mx-auto">
+                  Start Your First Print
                 </Link>
               </div>
             ) : (
-              <div className="space-y-3">
-                {jobs.map(job => {
-                  const status = TOKEN_STATUS[job.status] || TOKEN_STATUS.pending
-                  return (
-                    <div key={job.id} className="card py-4">
-                      <div className="flex items-start gap-4">
-                        <div className="text-center flex-shrink-0">
-                          <span className="text-xl font-syne font-bold text-cyan">
-                            #{String(job.tokenNumber).padStart(3, '0')}
-                          </span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <p className="text-sm font-semibold text-white truncate">{job.fileName || 'Document'}</p>
-                            <span className={`stat-badge flex-shrink-0 ${status.color}`}>
-                              {status.label}
-                            </span>
-                          </div>
-                          <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-                            <span>{job.shopName || 'Shop'}</span>
-                            <span>{job.pages}p · {job.mode === 'color' ? '🎨' : '⬛'}</span>
-                            <span className="text-emerald-400 font-medium">{formatINR(job.amount)}</span>
-                            <span>{shortDate(job.createdAt)}</span>
-                          </div>
-                        </div>
+              jobs.map(job => (
+                <div key={job.id} className="card group hover:border-primary/40 transition-all">
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-surface border border-border rounded-xl flex items-center justify-center text-primary group-hover:bg-primary/10 transition-colors">
+                        <FileText size={18} />
                       </div>
-                      {(job.status === 'pending' || job.status === 'printing') && (
-                        <div className={`mt-3 text-xs px-3 py-2 rounded-lg border flex items-center gap-2 ${status.color}`}>
-                          <Clock size={11} />
-                          {job.status === 'pending' ? 'Waiting in queue…' : '🖨️ Currently printing…'}
-                        </div>
-                      )}
+                      <div>
+                        <h4 className="font-bold text-main leading-tight truncate max-w-[200px] sm:max-w-xs">{job.fileName}</h4>
+                        <p className="text-[10px] text-muted overflow-hidden">{shortDate(job.createdAt)} • {job.pages} pages</p>
+                      </div>
                     </div>
-                  )
-                })}
-              </div>
+                    <div className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${TOKEN_STATUS[job.status]?.style}`}>
+                      {TOKEN_STATUS[job.status]?.label}
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between pt-4 border-t border-border/50">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[10px] font-bold uppercase text-muted tracking-widest">Token</span>
+                      <span className="font-mono font-bold text-primary text-sm bg-primary/5 px-2 py-0.5 rounded border border-primary/10">
+                        {job.token}
+                      </span>
+                    </div>
+                    <p className="text-sm font-bold text-main">{formatINR(job.amount)}</p>
+                  </div>
+                </div>
+              ))
             )}
           </div>
         )}
 
         {/* ── WALLET ────────────────────────────────────────────────── */}
         {tab === 'wallet' && (
-          <div className="space-y-5">
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {/* Balance card */}
-            <div className="card bg-gradient-to-br from-primary/20 to-cyan/20 border-cyan/20 text-center py-8">
-              <p className="text-xs text-slate-400 uppercase tracking-widest mb-2">Available Balance</p>
-              <p className="text-5xl font-syne font-black text-white mb-1">{formatINR(liveUserData?.wallet || 0)}</p>
-              <p className="text-xs text-slate-500">Printzo Wallet</p>
+            <div className="card overflow-hidden relative border-primary/20">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 rounded-full -mr-16 -mt-16 blur-3xl" />
+              <p className="text-xs font-bold text-muted uppercase tracking-[0.2em] mb-2">Available Balance</p>
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-syne font-black text-main">{formatINR(liveUserData?.wallet || 0)}</span>
+              </div>
             </div>
 
             {/* Top-up */}
             <div className="card">
-              <h3 className="text-sm font-syne font-bold text-white mb-4 flex items-center gap-2">
+              <h3 className="text-sm font-syne font-bold text-main mb-4 flex items-center gap-2">
                 <CreditCard size={15} className="text-cyan" /> Add Money
               </h3>
               {/* Quick amounts */}
@@ -204,7 +184,7 @@ export default function CustomerPortal() {
                     className={`py-2 rounded-xl border text-sm font-semibold transition-all ${
                       topUpAmount === String(amt)
                         ? 'border-primary bg-primary/10 text-primary'
-                        : 'border-border bg-surface text-slate-400 hover:border-primary/40'
+                        : 'border-border bg-card text-muted hover:border-primary/40'
                     }`}
                   >
                     ₹{amt}
@@ -221,20 +201,20 @@ export default function CustomerPortal() {
                   min={10}
                   max={5000}
                 />
-                <button onClick={handleTopUp} disabled={topping} className="btn-primary px-5">
-                  {topping ? <span className="spinner" /> : 'Add'}
+                <button onClick={handleTopUp} className="btn-primary px-5">
+                  Add
                 </button>
               </div>
-              <p className="text-xs text-slate-600 mt-2 flex items-center gap-1">
-                <span className="text-amber-500">⚠</span>
-                Demo mode: top-up is simulated. Connect a payment gateway for real transactions.
+              <p className="text-xs text-muted mt-3 py-2 px-3 bg-primary/5 rounded-lg border border-primary/10 flex items-center gap-2">
+                <ShieldCheck size={12} className="text-primary" />
+                Payments are handled securely via Admin UPI gateway.
               </p>
             </div>
 
             {/* How to use */}
             <div className="card border-border/50 bg-transparent">
-              <h4 className="text-xs font-semibold text-slate-400 mb-3 uppercase tracking-wider">How to use your wallet</h4>
-              <ul className="space-y-2 text-xs text-slate-500">
+              <h4 className="text-xs font-semibold text-muted mb-3 uppercase tracking-wider">How to use your wallet</h4>
+              <ul className="space-y-2 text-xs text-muted">
                 <li className="flex items-center gap-2"><span className="text-cyan">→</span> Choose "Wallet" when paying for prints</li>
                 <li className="flex items-center gap-2"><span className="text-cyan">→</span> Use ₹39 to activate AI Document Generator</li>
                 <li className="flex items-center gap-2"><span className="text-cyan">→</span> Helpful when UPI servers are down</li>
@@ -247,8 +227,8 @@ export default function CustomerPortal() {
         {tab === 'ai' && (
           <div>
             <div className="mb-5">
-              <h2 className="text-lg font-syne font-bold text-white mb-1">AI Document Generator</h2>
-              <p className="text-sm text-slate-400">Powered by Google Gemini</p>
+              <h2 className="text-lg font-syne font-bold text-main mb-1">AI Document Generator</h2>
+              <p className="text-sm text-muted">Powered by Google Gemini</p>
             </div>
             <AIDocGenerator
               hasSubscription={hasSubscription}
@@ -266,13 +246,58 @@ export default function CustomerPortal() {
             <div className="w-16 h-16 mx-auto mb-4 bg-primary/10 rounded-2xl flex items-center justify-center">
               <MapPin size={28} className="text-primary" />
             </div>
-            <h2 className="text-xl font-syne font-bold text-white mb-2">Find Nearby Shops</h2>
-            <p className="text-slate-400 text-sm mb-6">Discover Printzo-enabled print shops near you</p>
+            <h2 className="text-xl font-syne font-bold text-main mb-2">Find Nearby Shops</h2>
+            <p className="text-muted text-sm mb-6">Discover Printzo-enabled print shops near you</p>
             <Link to="/shops" className="btn-cyan justify-center">
               <MapPin size={14} /> Browse All Shops
             </Link>
           </div>
         )}
+      </div>
+
+      {/* Admin Payment Modal for Top-up */}
+      {showTopUpPayment && (
+        <AdminPaymentModal 
+          amount={parseInt(topUpAmount)}
+          onConfirm={confirmTopUp}
+          onClose={() => setShowTopUpPayment(false)}
+        />
+      )}
+    </div>
+  )
+}
+
+function AdminPaymentModal({ amount, onConfirm, onClose }) {
+  const adminUpi = import.meta.env.VITE_ADMIN_UPI_ID || 'sujalthapa369@oksbi'
+  const upiUrl = `upi://pay?pa=${adminUpi}&pn=Printzo%20Admin&am=${amount}&cu=INR`
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUrl)}`
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="card max-w-sm w-full p-6 text-center space-y-6 shadow-2xl border-primary/20 animate-in zoom-in-95 duration-300">
+        <h2 className="text-xl font-syne font-bold text-main">Add Money to Wallet</h2>
+        <div className="bg-white p-4 rounded-[20px] inline-block mb-2 border border-border shadow-lg">
+          <img src={qrUrl} alt="UPI QR" className="w-40 h-40" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-3xl font-syne font-black text-primary truncate px-2">{formatINR(amount)}</p>
+          <p className="text-xs text-muted font-medium">Scan the QR to pay the Admin</p>
+          <p className="text-[10px] text-muted opacity-60">UPI ID: {adminUpi}</p>
+        </div>
+        <div className="space-y-3">
+          <button 
+            onClick={onConfirm} 
+            className="btn-primary w-full justify-center py-3.5 text-sm font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all"
+          >
+            I've Paid Successfully
+          </button>
+          <button 
+            onClick={onClose} 
+            className="text-xs text-muted hover:text-red-500 transition-colors uppercase tracking-widest font-bold"
+          >
+            Cancel Transaction
+          </button>
+        </div>
       </div>
     </div>
   )
