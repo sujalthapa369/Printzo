@@ -129,25 +129,25 @@ export default function AIDocGenerator({ onSendToPrint, hasSubscription }) {
         <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-primary/20 to-cyan/20 rounded-2xl flex items-center justify-center border border-cyan/20">
           <Sparkles size={28} className="text-cyan" />
         </div>
-        <h3 className="text-xl font-syne font-bold text-white mb-2">AI Document Generator</h3>
-        <p className="text-slate-400 text-sm mb-6">
+        <h3 className="text-xl font-syne font-bold text-main mb-2">AI Document Generator</h3>
+        <p className="text-muted text-sm mb-6">
           Generate professional documents instantly using AI — cover letters, leave applications, NOCs, affidavits, and more.
         </p>
         <div className="bg-surface border border-border rounded-xl p-4 mb-6 space-y-2 text-left">
           {['Cover Letters & Job Applications', 'Leave & Declaration Forms', 'NOC & Authorization Letters', 'Affidavits & Academic Applications', '20+ document templates'].map(f => (
-            <div key={f} className="flex items-center gap-2 text-sm text-slate-300">
+            <div key={f} className="flex items-center gap-2 text-sm text-main/80 dark:text-slate-300">
               <span className="text-cyan">✓</span> {f}
             </div>
           ))}
         </div>
         <div className="flex items-center justify-center gap-2 mb-4">
-          <span className="text-3xl font-syne font-bold text-white">₹39</span>
-          <span className="text-slate-500 text-sm">/ 30 days</span>
+          <span className="text-3xl font-syne font-bold text-main">₹39</span>
+          <span className="text-muted text-sm">/ 30 days</span>
         </div>
         <button onClick={handleActivate} disabled={activating} className="btn-cyan w-full justify-center">
           {activating ? <><span className="spinner" /> Activating…</> : <><Lock size={14} /> Unlock with Wallet</>}
         </button>
-        <p className="text-xs text-slate-600 mt-3">Deducted from your Printzo wallet</p>
+        <p className="text-xs text-muted mt-3">Deducted from your Printzo wallet</p>
       </div>
     )
   }

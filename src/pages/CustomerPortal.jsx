@@ -75,7 +75,7 @@ export default function CustomerPortal() {
             <h1 className="text-2xl font-syne font-bold text-main">
               Hey, {user?.displayName?.split(' ')[0] || 'there'} 👋
             </h1>
-            <p className="text-slate-400 text-sm mt-0.5">Manage your print jobs and account</p>
+            <p className="text-muted text-sm mt-0.5">Manage your print jobs and account</p>
           </div>
           <Link to="/shops" className="btn-primary text-sm py-2 px-4">
             <Printer size={14} /> New Print
@@ -109,7 +109,7 @@ export default function CustomerPortal() {
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex-1 justify-center ${
                 tab === key
                   ? 'bg-primary text-bg shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  : 'text-muted hover:text-main'
               }`}
             >
               <Icon size={14} />
