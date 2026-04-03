@@ -5,6 +5,8 @@ import {
 } from 'firebase/firestore'
 import { db } from './config'
 
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://printzo.onrender.com/'
+
 // ─── SHOPS ──────────────────────────────────────────────────────────────────
 
 export const createShop = async (ownerId, shopData) => {
@@ -89,6 +91,18 @@ export const createPrintJob = async (jobData) => {
     status: 'pending', // pending | printing | completed | cancelled
     createdAt: serverTimestamp(),
   })
+
+  // 🚀 NOTIFY BACKEND: Send job info to your Render backend
+  try {
+    fetch(`${API_BASE_URL}api/print-job`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ jobId: ref.id, tokenNumber, ...jobData })
+    }).catch(err => console.error("Backend notification failed:", err))
+  } catch (e) {
+    console.warn("Backend call failed", e)
+  }
+
   return { jobId: ref.id, tokenNumber }
 }
 

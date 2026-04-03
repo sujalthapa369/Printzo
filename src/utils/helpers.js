@@ -1,3 +1,5 @@
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://printzo.onrender.com/'
+
 // Format currency in INR
 export const formatINR = (amount) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(amount)
