@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo } from 'react'
 import { collection, query, where, orderBy, limit, onSnapshot } from 'firebase/firestore'
 import { db } from '../firebase/config'
-import { TrendingUp, FileText, IndianRupee, Layers, Calendar, ArrowUpRight, TrendingDown, Clock } from 'lucide-react'
-import { formatINR } from '../utils/helpers'
-import { motion } from 'framer-motion'
+import { TrendingUp, FileText, IndianRupee, Layers, Calendar, ArrowUpRight, TrendingDown, Clock, CheckCircle, Package } from 'lucide-react'
+import { formatINR, shortDate } from '../utils/helpers'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -27,9 +27,7 @@ export default function AnalyticsPanel({ shopId }) {
 
     const unsub = onSnapshot(q, (snap) => {
       const data = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-      // Filter to only include money-generating status
-      const validJobs = data.filter(j => j.status === 'completed' || j.status === 'printing' || j.status === 'pending')
-      setJobs(validJobs)
+      setJobs(data)
       setLoading(false)
     }, (err) => {
       console.error("Analytics real-time sync failed:", err)
@@ -50,7 +48,6 @@ export default function AnalyticsPanel({ shopId }) {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    // Initialize last 7 days including today
     for (let i = 6; i >= 0; i--) {
       const d = new Date(today)
       d.setDate(d.getDate() - i)
@@ -61,7 +58,10 @@ export default function AnalyticsPanel({ shopId }) {
     const currentMonth = today.getMonth()
     const currentYear = today.getFullYear()
 
-    jobs.forEach(job => {
+    // Filter valid jobs for financial calculations (exclude cancelled)
+    const validJobs = jobs.filter(j => j.status !== 'cancelled')
+
+    validJobs.forEach(job => {
       const createdAt = job.createdAt?.toDate ? job.createdAt.toDate() : new Date(job.createdAt || Date.now())
       const amount = Number(job.amount) || 0
       const pages = Number(job.pages) || 0
@@ -74,17 +74,14 @@ export default function AnalyticsPanel({ shopId }) {
       const jDate = new Date(createdAt)
       jDate.setHours(0, 0, 0, 0)
 
-      // Today's revenue
       if (jDate.getTime() === today.getTime()) {
         todayRev += amount
       }
 
-      // This month's revenue
       if (createdAt.getMonth() === currentMonth && createdAt.getFullYear() === currentYear) {
         monthRev += amount
       }
 
-      // Populate 7-day chart
       const dateStr = jDate.toLocaleDateString('en-US', { weekday: 'short' })
       if (dailyMap[dateStr] !== undefined) {
         dailyMap[dateStr] += amount
@@ -106,7 +103,8 @@ export default function AnalyticsPanel({ shopId }) {
       colorPages, 
       chartData, 
       maxRev, 
-      totalJobs: jobs.length 
+      totalJobs: validJobs.length,
+      allJobs: jobs // keep original list for the feed
     }
   }, [jobs])
 
@@ -115,13 +113,13 @@ export default function AnalyticsPanel({ shopId }) {
       <div className="flex flex-col items-center justify-center p-24 bg-surface/30 rounded-[32px] border border-border/50 backdrop-blur-xl h-[500px]">
         <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mb-6" />
         <p className="text-main font-syne font-bold text-lg">Analyzing your business...</p>
-        <p className="text-muted text-sm mt-1">Fetching real-time transaction data</p>
+        <p className="text-muted text-sm mt-1">Streaming real-time performance data</p>
       </div>
     )
   }
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-12">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-2">
@@ -131,10 +129,6 @@ export default function AnalyticsPanel({ shopId }) {
           <h2 className="text-4xl font-syne font-black text-main tracking-tight">
             Perform<span className="text-primary">ance</span> dashboard
           </h2>
-        </div>
-        <div className="flex items-center gap-2 p-1 bg-surface border border-border rounded-xl self-start md:self-auto">
-          <span className="px-4 py-2 bg-primary text-bg text-xs font-bold rounded-lg shadow-lg">Last 30 Days</span>
-          <span className="px-4 py-2 text-muted text-xs font-bold">Lifetime</span>
         </div>
       </div>
 
@@ -155,21 +149,9 @@ export default function AnalyticsPanel({ shopId }) {
               {formatINR(stats.todayRev)}
             </span>
           </div>
-          <div className="mt-8 flex items-center gap-3">
-             <div className="flex -space-x-2">
-                {[1,2,3].map(i => <div key={i} className="w-6 h-6 rounded-full border-2 border-surface bg-slate-800" />)}
-             </div>
-             <p className="text-[10px] text-muted font-medium">Updated just now • Based on {stats.totalJobs} jobs</p>
-          </div>
-        </motion.div>
-
-        {/* KPI: Total Jobs */}
-        <motion.div variants={cardVariants} className="card !p-8 flex flex-col justify-between hover:border-primary/40 transition-all">
-          <p className="text-[10px] text-muted uppercase tracking-widest font-bold">Total Print Tokens</p>
-          <div className="mt-6">
-            <p className="text-4xl font-syne font-black text-main">{stats.totalJobs.toLocaleString()}</p>
-            <p className="text-xs text-primary font-bold mt-1">+12% from last week</p>
-          </div>
+          <p className="mt-4 text-[11px] text-muted font-bold uppercase tracking-widest flex items-center gap-2">
+             <Package size={12} /> {stats.totalJobs} Successful Transactions
+          </p>
         </motion.div>
 
         {/* KPI: Monthly Revenue */}
@@ -177,39 +159,54 @@ export default function AnalyticsPanel({ shopId }) {
           <p className="text-[10px] text-muted uppercase tracking-widest font-bold">Current Month</p>
           <div className="mt-6">
             <p className="text-3xl font-syne font-black text-main">{formatINR(stats.monthRev)}</p>
-            <p className="text-[10px] text-muted mt-2">Projection: {formatINR(stats.monthRev * 1.4)}</p>
+            <p className="text-[10px] text-primary font-bold mt-2">Active business cycle</p>
+          </div>
+        </motion.div>
+
+        {/* OUTPUT MIX */}
+        <motion.div variants={cardVariants} className="card !p-8 flex flex-col justify-between">
+          <h3 className="text-xs font-bold text-main uppercase tracking-widest mb-6">Output Mix</h3>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between text-[10px] font-bold mb-1">
+                <span className="text-muted">COLOR</span>
+                <span className="text-main">{stats.colorPages} pgs</span>
+              </div>
+              <div className="h-1.5 w-full bg-surface rounded-full overflow-hidden border border-border">
+                <motion.div animate={{ width: `${(stats.colorPages / Math.max(stats.bwPages + stats.colorPages, 1)) * 100}%` }} className="h-full bg-primary" />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between text-[10px] font-bold mb-1">
+                <span className="text-muted">B&W</span>
+                <span className="text-main">{stats.bwPages} pgs</span>
+              </div>
+              <div className="h-1.5 w-full bg-surface rounded-full overflow-hidden border border-border">
+                <motion.div animate={{ width: `${(stats.bwPages / Math.max(stats.bwPages + stats.colorPages, 1)) * 100}%` }} className="h-full bg-slate-500" />
+              </div>
+            </div>
           </div>
         </motion.div>
 
         {/* 7-DAY CHART */}
-        <motion.div variants={cardVariants} className="md:col-span-2 lg:col-span-3 card !p-8">
+        <motion.div variants={cardVariants} className="lg:col-span-4 card !p-8">
            <div className="flex items-center justify-between mb-8">
-              <h3 className="font-syne font-bold text-main">Revenue Velocity (7D)</h3>
-              <div className="flex gap-4">
-                 <div className="flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-primary" />
-                    <span className="text-[10px] text-muted font-bold uppercase">Daily Total</span>
-                 </div>
-              </div>
+              <h3 className="font-syne font-bold text-main">Weekly Profit Velocity</h3>
+              <span className="text-[10px] text-muted font-bold border border-border px-3 py-1 rounded-full">LIVE FEED</span>
            </div>
            
-           <div className="flex items-end justify-between h-48 gap-3 sm:gap-6 px-2">
+           <div className="flex items-end justify-between h-40 gap-4 sm:gap-8 px-4">
               {stats.chartData.map((data, i) => {
                 const height = (data.revenue / stats.maxRev) * 100
                 const isToday = i === 6
                 return (
                   <div key={i} className="flex-1 flex flex-col items-center gap-3 group relative">
-                    {data.revenue > 0 && (
-                      <div className="absolute -top-8 px-2 py-1 bg-main text-bg text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20">
-                        {formatINR(data.revenue)}
-                      </div>
-                    )}
                     <motion.div 
                       initial={{ height: 0 }}
                       animate={{ height: `${Math.max(height, 4)}%` }}
-                      transition={{ duration: 1, delay: i * 0.1, ease: "circOut" }}
-                      className={`w-full max-w-[40px] rounded-t-lg transition-all duration-300 ${
-                        isToday ? 'bg-primary shadow-[0_0_20px_rgba(34,211,238,0.4)]' : 'bg-surface border border-border group-hover:border-primary/40'
+                      transition={{ duration: 1, delay: i * 0.05 }}
+                      className={`w-full max-w-[50px] rounded-t-xl transition-all duration-300 ${
+                        isToday ? 'bg-primary shadow-[0_0_30px_rgba(34,211,238,0.3)]' : 'bg-surface border border-border group-hover:border-primary/40'
                       }`}
                     />
                     <span className={`text-[10px] font-bold uppercase tracking-widest ${isToday ? 'text-primary' : 'text-muted'}`}>
@@ -221,43 +218,65 @@ export default function AnalyticsPanel({ shopId }) {
            </div>
         </motion.div>
 
-        {/* OUTPUT MIX */}
-        <motion.div variants={cardVariants} className="card !p-8 flex flex-col justify-between">
-          <h3 className="text-xs font-bold text-main uppercase tracking-widest mb-6">Output Mix</h3>
-          <div className="space-y-6">
-            <div>
-              <div className="flex justify-between text-[11px] font-bold mb-2">
-                <span className="text-muted uppercase">Color (Premium)</span>
-                <span className="text-main">{stats.colorPages} pgs</span>
-              </div>
-              <div className="h-2 w-full bg-surface rounded-full overflow-hidden border border-border">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(stats.colorPages / Math.max(stats.bwPages + stats.colorPages, 1)) * 100}%` }}
-                  className="h-full bg-primary"
-                />
-              </div>
-            </div>
-            <div>
-              <div className="flex justify-between text-[11px] font-bold mb-2">
-                <span className="text-muted uppercase">B&W (Standard)</span>
-                <span className="text-main">{stats.bwPages} pgs</span>
-              </div>
-              <div className="h-2 w-full bg-surface rounded-full overflow-hidden border border-border">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(stats.bwPages / Math.max(stats.bwPages + stats.colorPages, 1)) * 100}%` }}
-                  className="h-full bg-slate-500"
-                />
-              </div>
-            </div>
-            <div className="pt-4 border-t border-border flex items-center gap-2">
-               <IndianRupee size={12} className="text-primary" />
-               <p className="text-[10px] text-muted font-medium">Avg ticket: {formatINR(stats.totalRev / Math.max(stats.totalJobs, 1))}</p>
-            </div>
-          </div>
+        {/* RECENT ACTIVITY FEED (HISTORY) */}
+        <motion.div variants={cardVariants} className="md:col-span-2 lg:col-span-4 mt-4">
+           <div className="flex items-center gap-3 mb-6">
+              <Clock className="text-primary w-5 h-5" />
+              <h3 className="text-lg font-syne font-bold text-main">Recent Activity Feed</h3>
+              <div className="h-px bg-border flex-1 ml-4" />
+           </div>
+           
+           <div className="grid grid-cols-1 gap-1">
+             {stats.allJobs.slice(0, 20).map((job, idx) => (
+               <motion.div 
+                 key={job.id} 
+                 initial={{ opacity: 0, x: -10 }} 
+                 animate={{ opacity: 1, x: 0 }} 
+                 transition={{ delay: idx * 0.05 }}
+                 className="flex items-center justify-between p-4 bg-surface/30 border-b border-border/50 first:rounded-t-2xl last:rounded-b-2xl hover:bg-surface/60 transition-colors group"
+               >
+                 <div className="flex items-center gap-4">
+                    <div className={`w-2 h-2 rounded-full ${
+                       job.status === 'completed' ? 'bg-success' : 
+                       job.status === 'printing' ? 'bg-cyan animate-pulse' : 
+                       job.status === 'cancelled' ? 'bg-danger' : 'bg-warning'
+                    }`} />
+                    <div className="w-10 text-[11px] font-mono text-cyan font-bold tracking-tighter">
+                       #{String(job.tokenNumber).padStart(3, '0')}
+                    </div>
+                    <div>
+                       <p className="text-sm font-bold text-main group-hover:text-primary transition-colors">{job.fileName || 'Untitled Doc'}</p>
+                       <p className="text-[10px] text-muted flex items-center gap-2">
+                          <Clock size={10} /> {shortDate(job.createdAt)} • {job.pages} pgs • {job.mode === 'color' ? 'Color' : 'B&W'}
+                       </p>
+                    </div>
+                 </div>
+                 
+                 <div className="flex items-center gap-6">
+                    <div className="text-right">
+                       <p className="text-sm font-black text-main">{formatINR(job.amount)}</p>
+                       <p className="text-[9px] font-bold text-muted uppercase tracking-wider">{job.paymentMethod}</p>
+                    </div>
+                    <div className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border border-current opacity-70 group-hover:opacity-100 transition-opacity ${
+                       job.status === 'completed' ? 'text-success' : 
+                       job.status === 'printing' ? 'text-cyan' : 
+                       job.status === 'cancelled' ? 'text-danger' : 'text-warning'
+                    }`}>
+                       {job.status}
+                    </div>
+                 </div>
+               </motion.div>
+             ))}
+             
+             {stats.allJobs.length === 0 && (
+               <div className="text-center py-20 bg-surface/10 rounded-2xl border border-dashed border-border">
+                  <p className="text-muted text-sm italic">No recent activity detected in your business cycles.</p>
+               </div>
+             )}
+           </div>
         </motion.div>
       </motion.div>
     </div>
   )
 }
+
