@@ -20,10 +20,6 @@ export default function JobCard({ job, compact = false }) {
     setLoading(true)
     try {
       await updatePrintJob(job.id, { status: step.next })
-      // Delete file from storage when completed (privacy)
-      if (step.next === 'completed' && job.filePath) {
-        await deleteDocument(job.filePath)
-      }
       toast.success(step.next === 'printing' ? 'Printing started!' : '✅ Job completed!')
     } catch {
       toast.error('Failed to update job')
@@ -37,7 +33,6 @@ export default function JobCard({ job, compact = false }) {
     setLoading(true)
     try {
       await updatePrintJob(job.id, { status: 'cancelled' })
-      if (job.filePath) await deleteDocument(job.filePath)
       toast.success('Job cancelled')
     } catch {
       toast.error('Failed to cancel')
