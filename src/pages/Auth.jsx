@@ -96,32 +96,31 @@ export default function Auth() {
           </div>
 
           <div className="p-6 space-y-5">
-            {/* Role selector (signup only) */}
-            {tab === 'signup' && (
-              <div>
-                <p className="text-xs text-slate-500 mb-2 font-medium">I am a…</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { key: 'customer', label: 'Customer', icon: User, desc: 'I want to print' },
-                    { key: 'retailer', label: 'Shop Owner', icon: Store, desc: 'I run a print shop' },
-                  ].map(({ key, label, icon: Icon, desc }) => (
-                    <button
-                      key={key}
-                      onClick={() => setRole(key)}
-                      className={`p-3 rounded-xl border text-left transition-all ${
-                        role === key
-                          ? 'border-primary bg-primary/10 text-main'
-                          : 'border-border bg-card text-muted hover:border-primary/40'
-                      }`}
-                    >
-                      <Icon size={16} className={`mb-1.5 ${role === key ? 'text-primary' : ''}`} />
-                      <p className="text-xs font-semibold">{label}</p>
-                      <p className="text-xs opacity-70">{desc}</p>
-                    </button>
-                  ))}
-                </div>
+            {/* Role selector (Always show) */}
+            <div>
+              <p className="text-xs text-muted mb-2 font-medium">I am a…</p>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { key: 'customer', label: 'Customer', icon: User, desc: 'I want to print' },
+                  { key: 'retailer', label: 'Shop Owner', icon: Store, desc: 'I run a print shop' },
+                ].map(({ key, label, icon: Icon, desc }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setRole(key)}
+                    className={`p-3 rounded-xl border text-left transition-all ${
+                      role === key
+                        ? 'border-primary bg-primary/10 text-main font-bold'
+                        : 'border-border bg-card text-muted hover:border-primary/40'
+                    }`}
+                  >
+                    <Icon size={16} className={`mb-1.5 ${role === key ? 'text-primary' : ''}`} />
+                    <p className="text-xs font-semibold">{label}</p>
+                    <p className="text-xs opacity-70 leading-tight">{desc}</p>
+                  </button>
+                ))}
               </div>
-            )}
+            </div>
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="space-y-4">

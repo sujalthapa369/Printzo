@@ -42,12 +42,20 @@ export const signInWithEmail = async (email, password) => {
 
 export const signInWithGoogle = async (role) => {
   const cred = await signInWithPopup(auth, googleProvider)
-  await createUserDoc(cred.user.uid, {
-    name: cred.user.displayName,
-    email: cred.user.email,
-    role: role || 'customer',
-    photoURL: cred.user.photoURL,
-  })
+  const userRef = doc(db, 'users', cred.user.uid)
+  const snap = await getDoc(userRef)
+  
+  // Only create user doc and set role IF they are new!
+  if (!snap.exists()) {
+    await setDoc(userRef, {
+      name: cred.user.displayName,
+      email: cred.user.email,
+      role: role || 'customer',
+      photoURL: cred.user.photoURL,
+      wallet: 0,
+      createdAt: serverTimestamp(),
+    })
+  }
   return cred.user
 }
 
