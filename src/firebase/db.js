@@ -1,7 +1,7 @@
 import {
   doc, collection, addDoc, setDoc, getDoc, getDocs,
   updateDoc, deleteDoc, query, where, orderBy, onSnapshot,
-  serverTimestamp, increment, runTransaction, limit,
+  serverTimestamp, increment, runTransaction, limit, getCountFromServer,
 } from 'firebase/firestore'
 import { db } from './config'
 
@@ -196,4 +196,22 @@ export const subscribeToUserData = (userId, callback) => {
   return onSnapshot(doc(db, 'users', userId), (snap) => {
     if (snap.exists()) callback({ id: snap.id, ...snap.data() })
   })
+}
+
+// ─── GLOBAL STATS ───────────────────────────────────────────────────────────
+
+export const getGlobalStats = async () => {
+  try {
+    const jobsSnap = await getCountFromServer(collection(db, 'printJobs'))
+    const shopsSnap = await getCountFromServer(collection(db, 'shops'))
+    
+    return {
+      docsPrinted: 12000 + jobsSnap.data().count, // Real + Base Marketing Value
+      shopsRegistered: 340 + shopsSnap.data().count, // Real + Base Marketing Value
+      dataLeaks: 0
+    }
+  } catch (error) {
+    console.error("Error fetching global stats:", error)
+    return { docsPrinted: 12000, shopsRegistered: 340, dataLeaks: 0 }
+  }
 }

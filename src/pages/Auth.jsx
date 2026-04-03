@@ -66,10 +66,7 @@ export default function Auth() {
   }
 
   return (
-    <div className="min-h-screen bg-bg flex items-center justify-center px-4 relative overflow-hidden">
-      {/* Orbs */}
-      <div className="orb w-[500px] h-[500px] bg-primary" style={{ top: '-20%', left: '-20%' }} />
-      <div className="orb w-[400px] h-[400px] bg-cyan" style={{ bottom: '-15%', right: '-15%' }} />
+    <div className="min-h-screen bg-white dark:bg-black flex items-center justify-center px-4 relative overflow-hidden">
 
       <div className="relative z-10 w-full max-w-md page-enter">
         {/* Logo */}

@@ -48,7 +48,7 @@ export default function ShopsPage() {
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">LIVE TRACKING</span>
             </div>
-            <h1 className="text-4xl md:text-5xl font-syne font-bold text-white tracking-tight">
+            <h1 className="text-4xl md:text-5xl font-syne font-bold text-main tracking-tight">
               Find <span className="text-gradient">Print Shops</span>
             </h1>
           </div>

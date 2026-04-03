@@ -72,7 +72,7 @@ export default function CustomerPortal() {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-syne font-bold text-white">
+            <h1 className="text-2xl font-syne font-bold text-main">
               Hey, {user?.displayName?.split(' ')[0] || 'there'} 👋
             </h1>
             <p className="text-slate-400 text-sm mt-0.5">Manage your print jobs and account</p>
@@ -91,7 +91,7 @@ export default function CustomerPortal() {
               </div>
               <div>
                 <p className="text-xs text-slate-400">Wallet Balance</p>
-                <p className="text-2xl font-syne font-bold text-white">{formatINR(liveUserData?.wallet || 0)}</p>
+                <p className="text-2xl font-syne font-bold text-main">{formatINR(liveUserData?.wallet || 0)}</p>
               </div>
             </div>
             <button onClick={() => setTab('wallet')} className="btn-secondary text-xs py-2 px-3">
@@ -108,7 +108,7 @@ export default function CustomerPortal() {
               onClick={() => setTab(key)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium whitespace-nowrap transition-all flex-1 justify-center ${
                 tab === key
-                  ? 'bg-primary text-white shadow-sm'
+                  ? 'bg-primary text-bg shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >

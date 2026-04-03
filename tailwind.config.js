@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: 'class',
   content: ['./index.html', './src/**/*.{js,jsx}'],
   theme: {
     extend: {
@@ -8,13 +9,15 @@ export default {
         dm: ['DM Sans', 'sans-serif'],
       },
       colors: {
-        bg: '#030712',
-        surface: '#0D1524',
-        card: '#111827',
-        border: '#1E293B',
-        primary: '#2563EB',
-        cyan: '#06B6D4',
-        success: '#10B981',
+        bg: 'rgb(var(--color-bg) / <alpha-value>)',
+        surface: 'rgb(var(--color-surface) / <alpha-value>)',
+        card: 'rgb(var(--color-card) / <alpha-value>)',
+        border: 'rgb(var(--color-border) / <alpha-value>)',
+        primary: 'rgb(var(--color-primary) / <alpha-value>)',
+        cyan: 'rgb(var(--color-cyan) / <alpha-value>)',
+        main: 'rgb(var(--color-text-main) / <alpha-value>)',
+        muted: 'rgb(var(--color-text-muted) / <alpha-value>)',
+        success: '#22C55E',
         warning: '#F59E0B',
         danger: '#EF4444',
       },

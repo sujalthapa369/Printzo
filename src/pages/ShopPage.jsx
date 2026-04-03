@@ -131,7 +131,7 @@ export default function ShopPage() {
     <div className="min-h-screen bg-bg flex items-center justify-center text-center px-4">
       <div>
         <div className="text-5xl mb-4">🏪</div>
-        <h2 className="text-xl font-syne font-bold text-white mb-2">Shop Not Found</h2>
+        <h2 className="text-xl font-syne font-bold text-main mb-2">Shop Not Found</h2>
         <p className="text-slate-400 mb-6">This QR code may be invalid or the shop is no longer active.</p>
         <Link to="/shops" className="btn-primary">Find Other Shops</Link>
       </div>
@@ -150,7 +150,7 @@ export default function ShopPage() {
               <Printer size={22} className="text-cyan" />
             </div>
             <div className="flex-1 min-w-0">
-              <h2 className="text-lg font-syne font-bold text-white truncate">{shop.name}</h2>
+              <h2 className="text-lg font-syne font-bold text-main truncate">{shop.name}</h2>
               {shop.address && (
                 <p className="text-xs text-slate-400 flex items-center gap-1 mt-1">
                   <MapPin size={11} /> {shop.address}

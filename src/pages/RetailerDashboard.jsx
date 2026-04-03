@@ -166,7 +166,7 @@ export default function RetailerDashboard() {
         {/* Header */}
         <div className="flex items-start justify-between mb-6 gap-4">
           <div>
-            <h1 className="text-2xl font-syne font-bold text-white">
+            <h1 className="text-2xl font-syne font-bold text-main">
               {shop ? shop.name : 'Setup Your Shop'}
             </h1>
             <p className="text-slate-400 text-sm mt-0.5">
@@ -185,7 +185,7 @@ export default function RetailerDashboard() {
         {!shop ? (
           <div className="max-w-md">
             <div className="card mb-6">
-              <h2 className="text-lg font-syne font-bold text-white mb-4">Create Your Shop</h2>
+              <h2 className="text-lg font-syne font-bold text-main mb-4">Create Your Shop</h2>
               <ShopForm form={shopForm} setForm={setShopForm} />
               <button onClick={handleSaveShop} disabled={savingShop} className="btn-primary w-full justify-center mt-4">
                 {savingShop ? <span className="spinner" /> : <><Save size={14} /> Create Shop</>}
@@ -201,7 +201,7 @@ export default function RetailerDashboard() {
                   key={key}
                   onClick={() => setTab(key)}
                   className={`flex items-center gap-1.5 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap transition-all ${
-                    tab === key ? 'bg-primary text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                    tab === key ? 'bg-primary text-bg shadow-sm' : 'text-slate-400 hover:text-slate-200'
                   }`}
                 >
                   <Icon size={13} />
@@ -254,7 +254,7 @@ export default function RetailerDashboard() {
                 {/* Add printer form */}
                 {showPrinterForm && (
                   <div className="card border-primary/20 bg-primary/5">
-                    <h3 className="text-sm font-syne font-bold text-white mb-4">New Printer</h3>
+                    <h3 className="text-sm font-syne font-bold text-main mb-4">New Printer</h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                       <div>
                         <label className="text-xs text-slate-400 mb-1 block">Printer Name</label>
@@ -323,7 +323,7 @@ export default function RetailerDashboard() {
                                 <Printer size={18} className={printer.status === 'online' ? 'text-cyan' : 'text-slate-600'} />
                               </div>
                               <div>
-                                <p className="text-sm font-semibold text-white">{printer.name}</p>
+                                <p className="text-sm font-semibold text-main">{printer.name}</p>
                                 <div className="flex items-center gap-2 mt-1">
                                   <span className="flex items-center gap-1 text-xs text-slate-500">
                                     <ConnIcon size={10} /> {printer.connectionType}
@@ -364,7 +364,7 @@ export default function RetailerDashboard() {
             {/* ── QR CODE ──────────────────────────── */}
             {tab === 'qr' && (
               <div className="flex flex-col items-center py-6">
-                <h2 className="text-lg font-syne font-bold text-white mb-2">Your Shop QR Code</h2>
+                <h2 className="text-lg font-syne font-bold text-main mb-2">Your Shop QR Code</h2>
                 <p className="text-sm text-slate-400 mb-8 text-center max-w-sm">
                   Place this at your counter. Customers scan to upload documents and start printing.
                 </p>
@@ -377,7 +377,7 @@ export default function RetailerDashboard() {
               <div className="max-w-md space-y-5">
                 <h2 className="text-sm font-semibold text-slate-300">Shop Settings</h2>
                 <div className="card">
-                  <h3 className="text-sm font-syne font-bold text-white mb-4">Shop Information</h3>
+                  <h3 className="text-sm font-syne font-bold text-main mb-4">Shop Information</h3>
                   <ShopForm form={shopForm} setForm={setShopForm} />
                   <button onClick={handleSaveShop} disabled={savingShop} className="btn-primary w-full justify-center mt-4">
                     {savingShop ? <span className="spinner" /> : <><Save size={14} /> Save Changes</>}

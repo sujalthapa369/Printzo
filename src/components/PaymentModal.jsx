@@ -1,160 +1,181 @@
 import { useState } from 'react'
-import { X, Zap, Banknote, Wallet, AlertCircle, CheckCircle, ArrowRight } from 'lucide-react'
-import { formatINR, PAYMENT_METHODS, getQRCodeUrl } from '../utils/helpers'
-import { deductWallet } from '../firebase/db'
-import { useAuth } from '../context/AuthContext'
-import toast from 'react-hot-toast'
+import { X, ExternalLink, ShieldCheck, Wallet, Banknote, QrCode } from 'lucide-react'
+import { formatINR } from '../utils/helpers'
 
 export default function PaymentModal({ job, onConfirm, onClose, walletBalance = 0, shopUpiId }) {
-  const { user } = useAuth()
-  const [selected, setSelected] = useState('upi')
   const [loading, setLoading] = useState(false)
+  const [method, setMethod] = useState('upi') // 'upi', 'wallet', 'cash'
 
-  const canUseWallet = walletBalance >= job.amount
+  if (!job) return null
 
-  const handleConfirm = async () => {
+  // Ensure upiId is valid
+  const targetUpi = (shopUpiId && shopUpiId.includes('@')) ? shopUpiId : 'merchant@upi'
+
+  const generateUpiUrl = () => {
+    const pa = encodeURIComponent(targetUpi)
+    const pn = encodeURIComponent('Printzo Shop')
+    const am = encodeURIComponent(job.amount.toString())
+    const tr = encodeURIComponent(`PZ-${Date.now()}`)
+    const cu = 'INR'
+    return `upi://pay?pa=${pa}&pn=${pn}&am=${am}&tr=${tr}&cu=${cu}`
+  }
+
+  const upiUrl = generateUpiUrl()
+  // Use a more stable QR API
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUrl)}`
+
+  const handleMethodSelect = async (mId) => {
+    setMethod(mId)
+    // For Wallet and UPI, we now proceed immediately after selection to avoid the extra button step.
+    // For Cash, it stays on screen so the user can show it to the retailer? 
+    // Actually the user says "once payment is done no need to press... then only request will go".
+    // So we trigger onConfirm(mId) immediately.
+    
+    if (mId === 'wallet' && walletBalance < job.amount) {
+      toast.error('Insufficient wallet balance')
+      return
+    }
+
     setLoading(true)
     try {
-      if (selected === 'wallet') {
-        await deductWallet(user.uid, job.amount)
-      }
-      await onConfirm(selected)
+      await onConfirm(mId)
     } catch (err) {
-      toast.error(err.message || 'Payment failed')
       setLoading(false)
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-black/70 backdrop-blur-sm">
-      <div className="w-full max-w-md glass-bright border border-border rounded-2xl flex flex-col max-h-[90vh] shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+      <div className="card max-w-md w-full !p-0 overflow-hidden relative shadow-2xl shadow-primary/20 animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh]">
+        
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-border flex-shrink-0">
-          <h2 className="text-lg font-syne font-bold text-white">Confirm & Pay</h2>
-          <button onClick={onClose} className="p-1.5 text-slate-400 hover:text-white transition-colors rounded-lg hover:bg-white/5">
+        <div className="bg-surface/80 border-b border-border p-5 flex items-center justify-between shrink-0">
+          <div>
+            <h2 className="text-xl font-syne font-bold text-main">Complete Payment</h2>
+            <p className="text-xs text-muted mt-1 flex items-center gap-1">
+              <ShieldCheck size={12} className="text-emerald-500" /> Secure Transaction
+            </p>
+          </div>
+          <button 
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-full bg-border hover:bg-red-500/10 hover:text-red-500 transition-colors active:scale-95"
+          >
             <X size={18} />
           </button>
         </div>
 
-        <div className="p-5 space-y-5 overflow-y-auto">
-          {/* Order summary */}
-          <div className="bg-surface border border-border rounded-xl p-4 space-y-2">
-            <p className="text-xs text-slate-500 uppercase tracking-wider font-medium mb-3">Order Summary</p>
-            <SummaryRow label="Document" value={job.fileName || 'Document'} />
-            <SummaryRow label="Pages" value={`${job.pages} pages`} />
-            <SummaryRow label="Print Mode" value={job.mode === 'color' ? '🎨 Color' : '⬛ B&W'} />
-            {job.isInstant && <SummaryRow label="Type" value="⚡ Instant Print" valueClass="text-amber-400" />}
-            <div className="border-t border-border mt-2 pt-2 flex items-center justify-between">
-              <span className="text-sm font-semibold text-white">Total</span>
-              <span className="text-xl font-syne font-bold text-emerald-400">{formatINR(job.amount)}</span>
-            </div>
+        {/* Content */}
+        <div className="p-6 space-y-6 overflow-y-auto">
+          {/* Amount Display */}
+          <div className="text-center">
+            <p className="text-sm font-semibold text-muted uppercase tracking-wider mb-1">Total Amount</p>
+            <p className="text-5xl font-syne font-black text-primary drop-shadow-[0_0_15px_rgba(37,99,235,0.4)]">
+              {formatINR(job.amount)}
+            </p>
           </div>
 
-          {/* Payment methods */}
-          <div className="space-y-2">
-            <p className="text-xs text-slate-500 uppercase tracking-wider font-medium">Payment Method</p>
-            {PAYMENT_METHODS.map(method => {
-              const isWallet = method.key === 'wallet'
-              const isDisabled = isWallet && !canUseWallet
-              return (
-                <label
-                  key={method.key}
-                  className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-all ${
-                    selected === method.key
-                      ? 'border-primary bg-primary/10'
-                      : 'border-border bg-surface hover:border-primary/40'
-                  } ${isDisabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+          {/* Payment Method Selector */}
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'upi', icon: QrCode, label: 'UPI QR' },
+              { id: 'wallet', icon: Wallet, label: 'Wallet' },
+              { id: 'cash', icon: Banknote, label: 'Cash' }
+            ].map(m => (
+              <button
+                key={m.id}
+                disabled={loading}
+                onClick={() => handleMethodSelect(m.id)}
+                className={`flex flex-col items-center justify-center gap-2 p-3 rounded-xl border transition-all ${
+                  method === m.id 
+                    ? 'bg-primary/10 border-primary text-primary shadow-sm' 
+                    : 'bg-surface border-border text-muted hover:border-primary/40'
+                } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {loading && method === m.id ? (
+                  <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                ) : (
+                  <m.icon size={20} className={method === m.id ? 'text-primary' : 'text-muted'} />
+                )}
+                <span className="text-xs font-semibold">{m.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Dynamic Payment Details */}
+          {method === 'upi' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="bg-white rounded-[24px] p-6 flex items-center justify-center border border-border mx-auto w-fit shadow-xl">
+                <img src={qrUrl} alt="UPI QR Code" className="w-[180px] h-[180px] rounded-lg" />
+              </div>
+              <div className="bg-surface/50 rounded-2xl p-4 border border-border flex flex-col items-center gap-2 text-center">
+                <p className="text-sm font-bold text-main">Paying on Mobile?</p>
+                <a 
+                  href={upiUrl}
+                  onClick={() => handleMethodSelect('upi')}
+                  className="inline-flex items-center gap-2 text-primary font-bold text-sm bg-primary/10 hover:bg-primary/20 px-6 py-2.5 rounded-xl transition-all active:scale-95 border border-primary/20"
                 >
-                  <input
-                    type="radio"
-                    name="payment"
-                    value={method.key}
-                    checked={selected === method.key}
-                    onChange={() => !isDisabled && setSelected(method.key)}
-                    className="sr-only"
-                    disabled={isDisabled}
-                  />
-                  <span className="text-xl">{method.icon}</span>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-white">{method.label}</p>
-                    <p className="text-xs text-slate-500">
-                      {isWallet
-                        ? canUseWallet
-                          ? `Balance: ${formatINR(walletBalance)}`
-                          : `Insufficient balance (${formatINR(walletBalance)})`
-                        : method.description
-                      }
-                    </p>
-                  </div>
-                  {selected === method.key && (
-                    <CheckCircle size={16} className="text-primary flex-shrink-0" />
-                  )}
-                </label>
-              )
-            })}
-          </div>
-
-          {/* UPI note and QR Code */}
-          {selected === 'upi' && (
-            <div className="flex flex-col items-center gap-3 bg-surface border border-border rounded-xl p-5 text-center mt-2">
-              <p className="text-sm font-semibold text-white">Scan QR Code to Pay</p>
-              
-              <div className="bg-white p-2 rounded-xl">
-                <img 
-                  src={getQRCodeUrl(`upi://pay?pa=${shopUpiId || 'tsujal568@okhdfcbank'}&pn=Printzo&am=${job.amount}&cu=INR`, 160)} 
-                  alt="UPI QR Code" 
-                  className="w-32 h-32" 
-                />
-              </div>
-              
-              <div className="text-xs text-slate-400 space-y-1">
-                <p>UPI ID: <span className="text-white font-mono">{shopUpiId || 'tsujal568@okhdfcbank'}</span></p>
-                <p>Amount: <span className="text-emerald-400 font-bold">{formatINR(job.amount)}</span></p>
-              </div>
-
-              <div className="flex items-start gap-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3 text-xs text-emerald-400 text-left w-full mt-2">
-                <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />
-                <span>Once payment is done, click confirm to automatically trigger the ESP32 printer queue.</span>
+                  Open UPI App <ExternalLink size={14} />
+                </a>
               </div>
             </div>
           )}
 
-          {selected === 'cash' && (
-            <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-xs text-amber-300">
-              <AlertCircle size={13} className="mt-0.5 flex-shrink-0" />
-              <span>Pay cash at the counter. The retailer will confirm receipt and start printing.</span>
-            </div>
-          )}
-
-          {/* Confirm button */}
-          <div className="pt-2 pb-1 sticky bottom-0 bg-surface/80 backdrop-blur-sm border-t border-border/50 -mx-5 px-5 mt-4">
-            <button
-              onClick={handleConfirm}
-              disabled={loading}
-              className="w-full btn-primary justify-center text-base py-3.5 shadow-lg"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <span className="spinner" />
-                  Processing…
+          {method === 'wallet' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300 border border-border rounded-2xl p-4">
+              <div className="flex justify-between items-center mb-2">
+                <span className="text-sm text-slate-400">Current Balance:</span>
+                <span className="font-bold font-syne">{formatINR(walletBalance)}</span>
+              </div>
+              <div className="flex justify-between items-center border-t border-border pt-4">
+                <span className="text-sm text-slate-400">After Deduction:</span>
+                <span className={`font-bold font-syne ${walletBalance >= job.amount ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {formatINR(walletBalance - job.amount)}
                 </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  Confirm & Submit Job
-                  <ArrowRight size={16} />
-                </span>
+              </div>
+              {walletBalance < job.amount && (
+                <p className="text-xs text-red-400 text-center mt-2 bg-red-400/10 py-2 rounded-lg border border-red-400/20">
+                  Insufficient balance. Top up from Dashboard.
+                </p>
               )}
-            </button>
+            </div>
+          )}
+
+          {method === 'cash' && (
+            <div className="bg-surface/50 rounded-2xl p-5 border border-border text-center space-y-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="w-12 h-12 bg-emerald-500/20 text-emerald-500 rounded-full flex items-center justify-center mx-auto mb-3">
+                <Banknote size={24} />
+              </div>
+              <h3 className="font-syne font-bold text-lg text-main">Pay at Counter</h3>
+              <p className="text-sm text-muted">Generate your token now and pay {formatINR(job.amount)} in cash at the shop to start printing.</p>
+            </div>
+          )}
+
+          {/* Instant Submit Instructions */}
+          <div className="space-y-3 pt-2">
+            {!loading && (
+              <div className="text-center p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                <p className="text-[10px] uppercase text-emerald-500 font-bold tracking-widest mb-1">Instant Fulfillment</p>
+                <p className="text-xs text-muted leading-relaxed">
+                  Select your method above. Your print job will be sent <b>immediately</b> to the shop queue.
+                </p>
+              </div>
+            )}
+            
+            {loading && (
+              <div className="flex flex-col items-center gap-3 py-4">
+                 <div className="w-8 h-8 border-3 border-primary/30 border-t-primary rounded-full animate-spin" />
+                 <p className="text-sm font-bold text-primary animate-pulse tracking-wide">SUBMITTING JOB...</p>
+              </div>
+            )}
+
+            <p className="text-[10px] text-muted text-center max-w-xs mx-auto leading-relaxed">
+              {job.isInstant 
+                ? "Your document is set to Instant Print and will float to the top of the queue upon confirmation."
+                : "By confirming, you agree that you have read and understood the privacy policy. No files are retained."}
+            </p>
           </div>
         </div>
       </div>
     </div>
   )
 }
-
-const SummaryRow = ({ label, value, valueClass = 'text-slate-300' }) => (
-  <div className="flex items-center justify-between text-sm">
-    <span className="text-slate-500">{label}</span>
-    <span className={`font-medium truncate max-w-[180px] ${valueClass}`}>{value}</span>
-  </div>
-)
